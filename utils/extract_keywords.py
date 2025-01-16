@@ -34,6 +34,7 @@ def extract_keywords(language: str):
 
 english_keywords = extract_keywords("eng")
 french_keywords = extract_keywords("fra")
+arabic_keywords = extract_keywords("ara")
 
 if __name__ == "__main__":
 

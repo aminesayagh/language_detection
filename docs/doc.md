@@ -1,6 +1,6 @@
 # Code Documentation
-Generated on: 2025-01-16T18:22:31.567Z
-Total files: 12
+Generated on: 2025-01-16T21:11:28.736Z
+Total files: 10
 
 ## Project Structure
 
@@ -10,22 +10,17 @@ Total files: 12
     ├── config
     │   └── settings.py
     ├── core
-    │   ├── __pycache__
-    │   │   └── script_analyzer.cpython-310.pyc
+    │   ├── dictionary_based_detection.py
     │   └── script_analyzer.py
     ├── index.py
     ├── tests
     │   └── test_detector.py
     └── utils
         ├── DataLoader.py
-        ├── __pycache__
-        │   └── DataLoader.cpython-310.pyc
+        ├── extract_keywords.py
         └── text
             ├── TextCleaner.py
-            ├── TextNormalizer.py
-            └── __pycache__
-                ├── TextCleaner.cpython-310.pyc
-                └── TextNormalizer.cpython-310.pyc
+            └── TextNormalizer.py
 ```
 
 ## File: __init__.py
@@ -42,9 +37,9 @@ Total files: 12
 
 ## File: index.py
 - Path: `/root/git/language_detection/index.py`
-- Size: 7.98 KB
+- Size: 8.04 KB
 - Extension: .py
-- Lines of code: 168
+- Lines of code: 169
 
 ```py
 from utils.DataLoader import DataLoader
@@ -54,6 +49,7 @@ from core.script_analyzer import ScriptAnalyzer
 import pandas as pd
 import logging
 from typing import Dict
+from core.dictionary_based_detection import DictionaryBasedDetection
 class DataProcessor:
 """
 A class to handle the complete data processing pipeline including loading,
@@ -227,6 +223,80 @@ print(f"Processed dataset saved to {output_path}")
 
 ```py
 
+```
+
+---------------------------------------------------------------------------
+
+## File: dictionary_based_detection.py
+- Path: `/root/git/language_detection/core/dictionary_based_detection.py`
+- Size: 3.21 KB
+- Extension: .py
+- Lines of code: 63
+
+```py
+import os
+import string
+from collections import defaultdict
+from typing import Dict, List, Set
+path = os.path.dirname(os.path.abspath(__file__))
+from utils.extract_keywords import extract_keywords
+class DictionaryBasedDetection:
+def __init__(self, languages: List[str], short_text_threshold: int = 3):
+"""
+Initialize the detector with language dictionaries.
+:param languages: List of language codes or names (e.g., ['english', 'french', 'arabic']).
+:param short_text_threshold: Maximum number of tokens to use dictionary-based detection.
+"""
+self.languages = languages
+self.short_text_threshold = short_text_threshold
+self.language_dictionaries = self.load_dictionaries(languages)
+def load_dictionaries(self, languages: List[str]):
+"""
+Load word lists for each language into a dictionary.
+:param languages: List of language names corresponding to dictionary files.
+:return: A dictionary mapping language names to sets of words.
+"""
+language_dictionaries = {}
+language_dictionaries['english'] = english_keywords
+language_dictionaries['arabic'] = arabic_keywords
+language_dictionaries['french'] = french_keywords
+return language_dictionaries
+def tokenize(self, text: str):
+"""
+Tokenize the input text into words.
+:param text: The text to tokenize.
+:return: A list of lowercased tokens without punctuation.
+"""
+tokens = text.lower().split()
+return tokens
+def detect_language(self, text: str) -> Tuple[str, float]:
+"""
+Detect the language of the input text using dictionary-based detection.
+:param text: The text to detect.
+:return: The detected language code.
+"""
+tokens = self.tokenize(text)
+num_tokens = len(tokens) # get the number of tokens in the text
+if num_tokens >= self.short_text_threshold:
+raise ValueError("Text is too long to detect language")
+# Initialize a dictionary to count matches for each language
+language_matches = defaultdict(int)
+for token in tokens:
+for lang, vocab in self.language_dictionaries.items():
+if token in vocab:
+language_matches[lang] += 1 # increment the count for the language
+if not language_matches:
+return "unknown", 0.0
+detected_language = max(language_matches, key=lambda lang: language_matches[lang]) # get the language with the most matches
+max_matches = language_matches[detected_language] # get the number of matches for the detected language
+total_matches = sum(language_matches.values()) # get the total number of matches
+confidence = max_matches / total_matches # calculate the confidence
+return detected_language, confidence # return the detected language and confidence
+if __name__ == "__main__":
+detector = DictionaryBasedDetection(["eng", "fra"])
+text = "Hello, how are you?"
+language, confidence = detector.detect_language(text)
+print(f"Detected language: {language}, Confidence: {confidence}")
 ```
 
 ---------------------------------------------------------------------------
@@ -479,6 +549,53 @@ stats = {
 return stats
 ```
 
+---------------------------------------------------------------------------
+
+## File: extract_keywords.py
+- Path: `/root/git/language_detection/utils/extract_keywords.py`
+- Size: 1.30 KB
+- Extension: .py
+- Lines of code: 34
+
+```py
+import nltk
+nltk.download('wordnet')
+nltk.download('omw-1.4')
+from nltk.corpus import wordnet as wn
+import os
+from text.TextCleaner import TextCleaner
+from text.TextNormalizer import TextNormalizer
+def extract_keywords(language: str):
+"""
+Extract keywords from the given language.
+"""
+# initialize the text cleaner and normalizer
+textCleaner = TextCleaner()
+textNormalizer = TextNormalizer()
+# get the keywords from the wordnet
+keywords = set()
+keywords_cleaned = set()
+# get the keywords from the wordnet
+for synset in wn.all_synsets(pos=wn.NOUN):  # You can use other POS: VERB, ADJ, ADV
+for lemma in synset.lemmas(language):  # Specify language
+keywords.add(lemma.name().lower().replace('_', ' '))
+# clean and normalize the keywords
+for keyword in keywords:
+keyword = textCleaner.clean_text(keyword) # clean the keyword
+keyword = textNormalizer.normalize_text(keyword) # normalize the keyword
+keywords_cleaned.add(keyword)
+return keywords_cleaned
+english_keywords = extract_keywords("eng")
+french_keywords = extract_keywords("fra")
+arabic_keywords = extract_keywords("ara")
+if __name__ == "__main__":
+# find if love exist in the intersection
+love = "love" in english_keywords
+print(love)
+```
+
+---------------------------------------------------------------------------
+
 ## File: TextCleaner.py
 - Path: `/root/git/language_detection/utils/text/TextCleaner.py`
 - Size: 4.55 KB
@@ -729,162 +846,6 @@ return {
 'length_before': str(len(original_text)),
 'length_after': str(len(normalized_text))
 }
-```
-
----------------------------------------------------------------------------
-
-## File: TextCleaner.cpython-310.pyc
-- Path: `/root/git/language_detection/utils/text/__pycache__/TextCleaner.cpython-310.pyc`
-- Size: 4.14 KB
-- Extension: .pyc
-- Lines of code: 35
-
-```pyc
-o
-    �>�g8  �                   @   s.   d dl Z d dlZd dlmZ G dd� d�ZdS )�    N)�Optionalc                
-   @   s�   e Zd ZdZdd� Zdedefdd�Zdedefdd	�Zdedefd
-d�Zdedefdd
-�Z	dedefdd�Z
-ddededefdd�Zdedefdd�Z
-dedefdd�Zdedefdd�Z		d dee dededee fdd�ZdS )!�TextCleanerz�
-A class to handle text cleaning and normalization operations for language detection.
-Focuses on removing unwanted tokens while preserving language-relevant characters.
-c                 C   sd   t �d�| _t �d�| _t �d�| _t �d�| _t �d�| _t �d�| _t �d�| _t �d�| _	d S )	NzPhttp[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+z@[\w_]+z#[\w_]+z<[^>]+>u   (?:^|\s)[0-9٠-٩]+(?:\s|$)z[^\w\s.,!?\'"-]z\s+u   [\(\)\[\]\{\}⟨⟩«»])
-�re�compile�url_pattern�mention_pattern�hashtag_pattern�html_pattern�numbers_pattern�special_chars_pattern�whitespace_pattern�parentheses_pattern)�self� r   �6/root/git/language_detection/utils/text/TextCleaner.py�__init__   s   �zTextCleaner.__init__�text�returnc                 C   �   | j �d|�S )zRemove URLs from text.� )r   �sub�r   r   r   r   r   �remove_urls(   �   zTextCleaner.remove_urlsc                 C   s   | j �d|�}| j�d|�S )zRemove mentions and hashtags.r   )r   r   r   r   r   r   r   �remove_social_media_elements,   s   z(TextCleaner.remove_social_media_elementsc                 C   r   )zRemove HTML tags.r   )r	   r   r   r   r   r   �remove_html_tags1   r   zTextCleaner.remove_html_tagsc                 C   s   t �|d�S )z&Remove emojis using the emoji library.� )�emoji�
-replace_emojir   r   r   r   �
-remove_emojis5   s   zTextCleaner.remove_emojisc                 C   r   )z.Remove numeric digits (both Arabic and Latin).r   )r
-   r   r   r   r   r   �remove_numbers9   r   zTextCleaner.remove_numbersT�keep_minimal_punctc                 C   s    |s	t �dd|�S | j�d|�S )a  
-Remove special characters and punctuation.
-Args:
-text: Input text to clean
-keep_minimal_punct: If True, keeps basic punctuation that might be relevant
-for language detection
-z[^\w\s]r   )r   r   r   )r   r   r!   r   r   r   �remove_special_characters=   s   	z%TextCleaner.remove_special_charactersc                 C   r   )z$Remove various types of parentheses.r   )r
-   r   r   r   r   r   �remove_parenthesesK   r   zTextCleaner.remove_parenthesesc                 C   s   | j �d|�� �S )z;Convert multiple whitespace characters into a single space.r   )r   r   �stripr   r   r   r   �normalize_whitespaceO   s   z TextCleaner.normalize_whitespacec                 C   s   |� t�ddd��S )zRemove Arabic diacritics.r   uR   ًٌٍَُِّْٕٖٜٟٓٔٗ٘ٙٚٛٝٞ٠١٢٣٤٥٦٧٨٩٠١٢٣٤٥٦٧٨٩)�	translate�str�	maketransr   r   r   r   �remove_diacriticsT   s   zTextCleaner.remove_diacritics�   �
-min_lengthc                 C   sr   |sdS | � |�}| �|�}| �|�}| �|�}| �|�}| �|�}| �||�}| �|�}t|�	� �|kr7|S dS )av  
-Apply all cleaning operations in sequence.
-Args:
-text: Input text to clean
-keep_minimal_punct: Whether to keep minimal punctuation
-min_length: Minimum length of text to consider non-empty
-Returns:
-Cleaned text or None if the input is None or becomes empty after cleaning
-N)
-r   r   r   r   r    r#   r"   r%   �lenr$   )r   r   r!   r+   r   r   r   �
-clean_textX   s   
-
-
-
-
-
-
-zTextCleaner.clean_textN)T)Tr*   )�__name__�
-__module__�__qualname__�__doc__r   r'   r   r   r   r   r    �boolr"   r#   r%   r)   r   �intr-   r   r   r   r   r      s.    �����r   )r   r   �typingr   r   r   r   r   r   �<module>   s    
-```
-
----------------------------------------------------------------------------
-
-## File: TextNormalizer.cpython-310.pyc
-- Path: `/root/git/language_detection/utils/text/__pycache__/TextNormalizer.cpython-310.pyc`
-- Size: 4.93 KB
-- Extension: .pyc
-- Lines of code: 82
-
-```pyc
-o
-    �9�g�  �                   @   s*   d dl Z d dlmZmZ G dd� d�ZdS )�    N)�Dict�Optionalc                   @   s�   e Zd ZdZdd� Zdedefdd�Zdedefdd	�Zdedefd
-d�Zdedefdd
-�Z	ddede
-e defdd�Zdedeeef fdd�Z
-dS )�TextNormalizerz�
-A class to normalize text across different languages (Arabic, French, English).
-Handles tasks like lowercasing, diacritic removal, and character normalization.
-c                 C   s�  i dd�dd�dd�dd�dd�dd�dd�d	d
-�dd
-�d
-d
-�dd
-�d
-d
-�dd
-�dd
-�dd
-�dd
-�dd
-�i dd
-�dd
-�dd
-�dd
-�dd�dd�dd�dd�dd�dd�dd�dd�d d�d!d�d"d�d#d�d$d��i d%d�d&d'�d(d'�d)d'�d*d'�d+d,�d-d,�d.d,�d/d,�d0d1�d2d1�d3d1�d4d1�d5d1�d6d1�d7d1�d8d1��d1d1d1d
-d'd9��| _ t�d:�| _t�d;�| _t�d<�| _t�d=�| _t�d>�| _d S )?Nu   أu   اu   إu   آu   ٱu   ٲu   ٳu   ٵ�   ىu   يu   ئu   ۍu   ێu   ېu   ٸu   ﯨu   ﯩu   ﻰu   ﻱu   ﻲu   ﻳu   ﻴu   ؤu   وu   ٶu   ٷu   ۄu   ۅu   ۆu   ۇu   ۈu   ۉu   ۊu   ۋu   ۏu   ݸu   ݹu   ء� u   ٔu   ٕu   ٚu   ةu   هu   ۃu   ەu   ۀu   كu   کu   ڪu   ػu   ؼu   ڬu   ڭu   ڮu   ݢ)u   ݣu   ݤu   ݿr   u   ـz[\u064B-\u065F\u0670]u   [؀-ۿ]z[a-zA-Z]z\s+z([!?,.]){2,})�arabic_chars_map�re�compile�arabic_diacritics�arabic_chars�latin_chars�consecutive_spaces�consecutive_punctuation)�self� r   �9/root/git/language_detection/utils/text/TextNormalizer.py�__init__
-   s�   ���������������������	�	�	�	�	�	�	�
-�
-�
-�
-�
-�
-�
-�
-�
-�
-�
-�������������
-� zTextNormalizer.__init__�text�returnc                 C   s2   | j �d|�}| j�� D ]
-\}}|�||�}q|S )z�
-Normalize Arabic text by removing diacritics and standardizing characters.
-Args:
-text: Input Arabic text
-Returns:
-Normalized Arabic text
-r   )r
-   �subr   �items�replace)r   r   �original�
-normalizedr   r   r   �normalize_arabic4   s   zTextNormalizer.normalize_arabicc                 C   s   |� � S )z�
-Normalize Latin script text (French/English).
-Args:
-text: Input text in Latin script
-Returns:
-Normalized text
-)�lower�r   r   r   r   r   �normalize_latinG   s   zTextNormalizer.normalize_latinc                 C   s$   | j �d|�}| j�d|�}|�� S )z�
-Normalize punctuation and whitespace.
-Args:
-text: Input text
-Returns:
-Text with normalized punctuation and whitespace
-� z\1)r
-   r   r   �stripr   r   r   r   �normalize_punctuationT   s   z$TextNormalizer.normalize_punctuationc                 C   sX   t | j�|��}t | j�|��}|| }|dkrdS || }|dkr$dS |dk r*dS dS )z�
-Detect the predominant script in the text.
-Args:
-text: Input text
-Returns:
-'arabic' for Arabic script, 'latin' for Latin script,
-'mixed' if no clear predominance
-r   �unknowngffffff�?�arabicg333333�?�latin�mixed)�lenr   �findallr   )r   r   �arabic_count�latin_count�total�arabic_ratior   r   r   �
-detect_scriptg   s   zTextNormalizer.detect_scriptN�force_scriptc                 C   sh   |sdS |p
-| � |�}|dkr| �|�}n|dkr| �|�}n|dkr-| �|�}| �|�}| �|�}|S )a  
-Main normalization method that handles text in any supported script.
-Args:
-text: Input text to normalize
-force_script: Optional script type to force ('arabic' or 'latin')
-Returns:
-Normalized text
-r   r"   r#   r$   )r+   r   r   r    )r   r   r,   �scriptr   r   r   �	normalize�   s   
-
-
-zTextNormalizer.normalizec                 C   s8   |}| � |�}| �|�}|||tt|��tt|��d�S )z�
-Get information about the normalization process for debugging.
-Args:
-text: Input text
-Returns:
-Dictionary containing normalization information
-)�
-original_text�detected_script�normalized_text�
-length_before�length_after)r+   r.   �strr%   )r   r   r/   r-   r1   r   r   r   �get_normalization_info�   s   
-
-
-
-�z%TextNormalizer.get_normalization_info)N)�__name__�
-__module__�__qualname__�__doc__r   r4   r   r   r    r+   r   r.   r   r5   r   r   r   r   r      s    *
- r   )r   �typingr   r   r   r   r   r   r   �<module>   s    
 ```
 
 ---------------------------------------------------------------------------

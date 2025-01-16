@@ -18,6 +18,7 @@ TREE_OUTPUT=$(tree -a -I 'node_modules|.git|.next|dist|.turbo|.cache|.vercel|cov
 
 cw doc \
     --pattern ".py" \
+    --exclude ".pyc" \
     --output "docs/doc.md" \
     --compress false
 

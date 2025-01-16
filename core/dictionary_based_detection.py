@@ -28,8 +28,9 @@ class DictionaryBasedDetection:
         :return: A dictionary mapping language names to sets of words.
         """
         language_dictionaries = {}
-        for lang in languages:
-            language_dictionaries[lang] = extract_keywords(lang)
+        language_dictionaries['english'] = english_keywords
+        language_dictionaries['arabic'] = arabic_keywords
+        language_dictionaries['french'] = french_keywords
         return language_dictionaries
         
     def tokenize(self, text: str):

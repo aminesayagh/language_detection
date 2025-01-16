@@ -8,6 +8,7 @@
 |-- core
 |   |-- __pycache__
 |   |   `-- script_analyzer.cpython-310.pyc
+|   |-- dictionary_based_detection.py
 |   `-- script_analyzer.py
 |-- data
 |   |-- dataset1.csv
@@ -30,7 +31,8 @@
 |   |   |   `-- TextNormalizer.cpython-310.pyc
 |   |   |-- TextCleaner.py
 |   |   `-- TextNormalizer.py
-|   `-- DataLoader.py
+|   |-- DataLoader.py
+|   `-- extract_keywords.py
 |-- .vscode
 |-- .gitignore
 |-- index.py
@@ -38,5 +40,5 @@
 |-- README.md
 `-- requirements.txt
 
-14 directories, 22 files
+14 directories, 24 files
 ```
