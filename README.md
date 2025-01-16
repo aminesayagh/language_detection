@@ -32,7 +32,7 @@
 1. **Short-text threshold**:
     - If text length < X tokens (e.g., 3–5 words), dictionary-based approaches are often more reliable than statistical ones.
 2. **Dictionary or lexicon approach**:
-    - Maintain domain-specific word lists for Arabic, Darija slang, French, English, Spanish, etc.
+    - Maintain domain-specific word lists for Arabic, French, English, etc.
     - Check how many tokens map to each language dictionary.
 3. **Heuristic rules**:
     - If a majority (or a weighted majority) of tokens match a given dictionary, classify accordingly.
