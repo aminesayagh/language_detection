@@ -5,6 +5,7 @@ from core.script_analyzer import ScriptAnalyzer
 import pandas as pd
 import logging
 from typing import Dict
+from core.dictionary_based_detection import DictionaryBasedDetection
 
 class DataProcessor:
     """

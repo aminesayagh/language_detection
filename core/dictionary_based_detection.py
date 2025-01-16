@@ -3,41 +3,36 @@ import string
 from collections import defaultdict
 from typing import Dict, List, Set
 
+path = os.path.dirname(os.path.abspath(__file__))
+
+from utils.extract_keywords import extract_keywords
+
+
 class DictionaryBasedDetection:
-    def __init__(self, dictionary_path: str, languages: List[str], short_text_threshold: int = 3):
+    def __init__(self, languages: List[str], short_text_threshold: int = 3):
         """
         Initialize the detector with language dictionaries.
 
-        :param dictionaries_path: Path to the directory containing language dictionary files.
         :param languages: List of language codes or names (e.g., ['english', 'french', 'arabic']).
         :param short_text_threshold: Maximum number of tokens to use dictionary-based detection.
         """
         self.languages = languages
         self.short_text_threshold = short_text_threshold
-        self.language_dictionaries = self.load_dictionaries(dictionary_path, languages)
+        self.language_dictionaries = self.load_dictionaries(languages)
         
-    def load_dictionaries(self, path: str, languages: List[str]):
+    def load_dictionaries(self, languages: List[str]):
         """
         Load word lists for each language into a dictionary.
 
-        :param path: Directory path containing dictionary files.
         :param languages: List of language names corresponding to dictionary files.
         :return: A dictionary mapping language names to sets of words.
         """
-        language_dict = {}
+        language_dictionaries = {}
         for lang in languages:
-            file_path = os.path.join(path, f"{lang}.txt")
-            try:
-                with open(file_path, 'r', encoding='utf-8') as file:
-                    words = set(line.strip().lower() for line in file if line.strip())
-                    language_dict[lang] = words
-                print(f"Loaded dictionary for language: {lang} with {len(words)} words.")
-            except FileNotFoundError:
-                print(f"Dictionary file for language '{lang}' not found at {file_path}.")
-                language_dict[lang] = set()
-        return language_dict
+            language_dictionaries[lang] = extract_keywords(lang)
+        return language_dictionaries
         
-    def tokenize(self, text: str) -> List[str]:
+    def tokenize(self, text: str):
         """
         Tokenize the input text into words.
 
@@ -47,7 +42,7 @@ class DictionaryBasedDetection:
         tokens = text.lower().split()
         return tokens
     
-    def detect_language(self, text: str):
+    def detect_language(self, text: str) -> Tuple[str, float]:
         """
         Detect the language of the input text using dictionary-based detection.
 
@@ -55,18 +50,21 @@ class DictionaryBasedDetection:
         :return: The detected language code.
         """
         tokens = self.tokenize(text)
-        num_tokens = len(tokens)
+        num_tokens = len(tokens) # get the number of tokens in the text
         
         if num_tokens >= self.short_text_threshold:
-            return "unknown"
+            raise ValueError("Text is too long to detect language")
+        
+        # Initialize a dictionary to count matches for each language
+        language_matches = defaultdict(int)
         
         for token in tokens:
             for lang, vocab in self.language_dictionaries.items():
                 if token in vocab:
-                    language_counts[lang] += 1
+                    language_matches[lang] += 1 # increment the count for the language
                     
         if not language_matches:
-            return "unknown"
+            return "unknown", 0.0
         
         detected_language = max(language_matches, key=lambda lang: language_matches[lang]) # get the language with the most matches
         max_matches = language_matches[detected_language] # get the number of matches for the detected language
@@ -74,3 +72,9 @@ class DictionaryBasedDetection:
         confidence = max_matches / total_matches # calculate the confidence
         
         return detected_language, confidence # return the detected language and confidence
+    
+if __name__ == "__main__":
+    detector = DictionaryBasedDetection(["eng", "fra"])
+    text = "Hello, how are you?"
+    language, confidence = detector.detect_language(text)
+    print(f"Detected language: {language}, Confidence: {confidence}")
